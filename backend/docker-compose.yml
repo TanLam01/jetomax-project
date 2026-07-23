@@ -1,0 +1,21 @@
+services:
+  api:
+    container_name: jetomax-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 8080
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+      REDIS_URL: redis://host.docker.internal:6379/0
+      ERROR_LOG_PATH: /app/logs/error.log
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
