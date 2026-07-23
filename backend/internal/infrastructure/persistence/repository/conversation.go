@@ -150,6 +150,56 @@ func (r *Conversation) AddMembers(ctx context.Context, conversationID, actorID s
 	return added, err
 }
 
+func (r *Conversation) RemoveMember(ctx context.Context, conversationID, actorID, targetUserID string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var conversation gormmodel.Conversation
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&conversation, "id = ?", conversationID).Error; err != nil {
+			return translate(err)
+		}
+		if conversation.Type != "group" {
+			return fmt.Errorf("%w: members can only be removed from group conversations", domainerrors.ErrValidation)
+		}
+
+		var actor gormmodel.ConversationMember
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&actor, "conversation_id = ? AND user_id = ?", conversationID, actorID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainerrors.ErrForbidden
+			}
+			return err
+		}
+		var target gormmodel.ConversationMember
+		if actorID == targetUserID {
+			target = actor
+		} else if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&target, "conversation_id = ? AND user_id = ?", conversationID, targetUserID).Error; err != nil {
+			return translate(err)
+		}
+
+		if target.Role == "owner" {
+			return fmt.Errorf("%w: group owner cannot be removed before ownership transfer", domainerrors.ErrValidation)
+		}
+		if actorID != targetUserID {
+			if actor.Role == "owner" {
+				// Owner may remove admins and members.
+			} else if actor.Role == "admin" && target.Role == "member" {
+				// Admin may remove members only.
+			} else {
+				return domainerrors.ErrForbidden
+			}
+		}
+
+		result := tx.Delete(&gormmodel.ConversationMember{}, "conversation_id = ? AND user_id = ?", conversationID, targetUserID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return domainerrors.ErrNotFound
+		}
+		return nil
+	})
+}
+
 func conversationToEntity(model gormmodel.Conversation) entity.Conversation {
 	name, avatar := "", ""
 	if model.Name != nil {

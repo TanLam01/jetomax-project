@@ -82,6 +82,16 @@ func (s *Service) AddMembers(ctx context.Context, actorID, conversationID string
 	return s.repository.AddMembers(ctx, conversationID, actorID, unique)
 }
 
+func (s *Service) RemoveMember(ctx context.Context, actorID, conversationID, targetUserID string) error {
+	if _, err := uuid.Parse(conversationID); err != nil {
+		return fmt.Errorf("%w: invalid conversation id", domainerrors.ErrValidation)
+	}
+	if _, err := uuid.Parse(targetUserID); err != nil {
+		return fmt.Errorf("%w: invalid user id", domainerrors.ErrValidation)
+	}
+	return s.repository.RemoveMember(ctx, conversationID, actorID, targetUserID)
+}
+
 func NewService(repository repository.ConversationRepository) *Service {
 	return &Service{repository: repository}
 }

@@ -30,6 +30,7 @@ type ConversationRepository interface {
 	CreateDirect(context.Context, string, string, string) (*entity.ConversationSummary, bool, error)
 	CreateGroup(context.Context, string, entity.CreateGroupInput) (*entity.ConversationSummary, error)
 	AddMembers(context.Context, string, string, []string) ([]string, error)
+	RemoveMember(context.Context, string, string, string) error
 }
 
 type MessageRepository interface {

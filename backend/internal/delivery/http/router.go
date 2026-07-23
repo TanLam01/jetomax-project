@@ -57,6 +57,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 	protected.POST("/conversations/direct", conversationHandler.CreateDirect)
 	protected.POST("/conversations/groups", conversationHandler.CreateGroup)
 	protected.POST("/conversations/:id/members", conversationHandler.AddMembers)
+	protected.DELETE("/conversations/:id/members/:userId", conversationHandler.RemoveMember)
 	protected.GET("/conversations/:id/messages", messageHandler.List)
 	router.NoRoute(func(c *gin.Context) {
 		respondError(c, http.StatusNotFound, "route_not_found", "route not found")

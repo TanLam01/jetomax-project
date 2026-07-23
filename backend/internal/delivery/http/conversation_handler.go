@@ -123,3 +123,27 @@ func (h *ConversationHandler) AddMembers(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, dto.NewAddMembersResponse(added))
 }
+
+// RemoveMember godoc
+// @Summary Remove a member from a group or leave a group
+// @Description Owners can remove admins/members, admins can remove members, and non-owner users can remove themselves to leave.
+// @Tags conversations
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Conversation UUID"
+// @Param userId path string true "Target user UUID"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /conversations/{id}/members/{userId} [delete]
+func (h *ConversationHandler) RemoveMember(c *gin.Context) {
+	err := h.service.RemoveMember(c.Request.Context(), authenticatedUserID(c), c.Param("id"), c.Param("userId"))
+	if err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
