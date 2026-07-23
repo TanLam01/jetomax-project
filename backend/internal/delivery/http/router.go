@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jetomax/realtime-chat/backend/internal/delivery/http/dto"
 	"github.com/jetomax/realtime-chat/backend/internal/domain/repository"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -32,7 +31,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 		defer cancel()
 		for _, check := range checks {
 			if err := check(ctx); err != nil {
-				c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready"})
+				respondError(c, http.StatusServiceUnavailable, "readiness_check_failed", err.Error())
 				return
 			}
 		}
@@ -58,8 +57,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 	protected.POST("/conversations/direct", conversationHandler.CreateDirect)
 	protected.POST("/conversations/groups", conversationHandler.CreateGroup)
 	router.NoRoute(func(c *gin.Context) {
-		setSafeError(c, "not_found", "route not found")
-		c.JSON(http.StatusNotFound, dto.NewErrorResponse("not_found", "route not found"))
+		respondError(c, http.StatusNotFound, "route_not_found", "route not found")
 	})
 	return router
 }

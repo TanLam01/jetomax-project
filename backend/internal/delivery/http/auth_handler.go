@@ -135,5 +135,5 @@ func validationError(c *gin.Context, message string) {
 
 func respondError(c *gin.Context, status int, code, message string) {
 	setSafeError(c, code, message)
-	c.JSON(status, dto.NewErrorResponse(code, message))
+	c.JSON(status, dto.NewPublicErrorResponse(status))
 }

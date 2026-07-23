@@ -60,6 +60,8 @@ Passwords are one-way hashed with bcrypt and are never returned by the API. Refr
 
 Every HTTP `4xx`/`5xx` response receives an `X-Request-ID` and is recorded in both PostgreSQL table `errors` and the JSON Lines file configured by `ERROR_LOG_PATH` (default `logs/error.log`). Request/response bodies and credentials are deliberately excluded.
 
+Client responses are intentionally generic by HTTP status (`Bad request`, `Unauthorized`, `Not found`, `Conflict`, `Internal server error`, etc.). The specific internal error code and message are available only in the server-side audit records and can be correlated using `X-Request-ID`.
+
 Regenerate Swagger after changing an endpoint or DTO:
 
 ```bash
