@@ -57,6 +57,31 @@ func (s *Service) CreateGroup(ctx context.Context, creatorID, name, avatarKey st
 	return s.repository.CreateGroup(ctx, creatorID, entity.CreateGroupInput{Name: name, AvatarKey: avatarKey, MemberIDs: unique})
 }
 
+func (s *Service) AddMembers(ctx context.Context, actorID, conversationID string, userIDs []string) ([]string, error) {
+	if _, err := uuid.Parse(conversationID); err != nil {
+		return nil, fmt.Errorf("%w: invalid conversation id", domainerrors.ErrValidation)
+	}
+	if len(userIDs) == 0 {
+		return nil, fmt.Errorf("%w: at least one user_id is required", domainerrors.ErrValidation)
+	}
+	if len(userIDs) > 100 {
+		return nil, fmt.Errorf("%w: no more than 100 users can be added at once", domainerrors.ErrValidation)
+	}
+	unique := make([]string, 0, len(userIDs))
+	seen := make(map[string]struct{}, len(userIDs))
+	for _, id := range userIDs {
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, fmt.Errorf("%w: invalid user_id", domainerrors.ErrValidation)
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	return s.repository.AddMembers(ctx, conversationID, actorID, unique)
+}
+
 func NewService(repository repository.ConversationRepository) *Service {
 	return &Service{repository: repository}
 }

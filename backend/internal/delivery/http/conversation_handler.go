@@ -93,3 +93,33 @@ func (h *ConversationHandler) CreateGroup(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, dto.NewConversationResponse(*conversation))
 }
+
+// AddMembers godoc
+// @Summary Add members to a group conversation
+// @Description Only the group owner or an admin can add users. Existing members are ignored.
+// @Tags conversations
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Conversation UUID"
+// @Param request body dto.AddMembersRequest true "Users to add"
+// @Success 200 {object} dto.AddMembersResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /conversations/{id}/members [post]
+func (h *ConversationHandler) AddMembers(c *gin.Context) {
+	var request dto.AddMembersRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		validationError(c, "invalid request body")
+		return
+	}
+	added, err := h.service.AddMembers(c.Request.Context(), authenticatedUserID(c), c.Param("id"), request.UserIDs)
+	if err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewAddMembersResponse(added))
+}

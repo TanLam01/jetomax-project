@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jetomax/realtime-chat/backend/internal/domain/entity"
@@ -102,6 +104,50 @@ func (r *Conversation) CreateGroup(ctx context.Context, creatorID string, input 
 		return nil
 	})
 	return &result, err
+}
+
+func (r *Conversation) AddMembers(ctx context.Context, conversationID, actorID string, userIDs []string) ([]string, error) {
+	added := make([]string, 0, len(userIDs))
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var conversation gormmodel.Conversation
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&conversation, "id = ?", conversationID).Error; err != nil {
+			return translate(err)
+		}
+		if conversation.Type != "group" {
+			return fmt.Errorf("%w: members can only be added to group conversations", domainerrors.ErrValidation)
+		}
+		var actor gormmodel.ConversationMember
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&actor, "conversation_id = ? AND user_id = ?", conversationID, actorID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainerrors.ErrForbidden
+			}
+			return err
+		}
+		if actor.Role != "owner" && actor.Role != "admin" {
+			return domainerrors.ErrForbidden
+		}
+
+		var userCount int64
+		if err := tx.Model(&gormmodel.User{}).Where("id IN ?", userIDs).Count(&userCount).Error; err != nil {
+			return err
+		}
+		if userCount != int64(len(userIDs)) {
+			return domainerrors.ErrNotFound
+		}
+		for _, userID := range userIDs {
+			member := gormmodel.ConversationMember{ConversationID: conversationID, UserID: userID, Role: "member"}
+			result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&member)
+			if result.Error != nil {
+				return translate(result.Error)
+			}
+			if result.RowsAffected == 1 {
+				added = append(added, userID)
+			}
+		}
+		return nil
+	})
+	return added, err
 }
 
 func conversationToEntity(model gormmodel.Conversation) entity.Conversation {

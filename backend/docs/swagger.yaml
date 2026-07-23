@@ -1,5 +1,23 @@
 basePath: /api/v1
 definitions:
+  dto.AddMembersRequest:
+    properties:
+      user_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - user_ids
+    type: object
+  dto.AddMembersResponse:
+    properties:
+      added_count:
+        type: integer
+      added_user_ids:
+        items:
+          type: string
+        type: array
+    type: object
   dto.ConversationListResponse:
     properties:
       data:
@@ -327,6 +345,56 @@ paths:
       security:
       - BearerAuth: []
       summary: List conversations for the authenticated member
+      tags:
+      - conversations
+  /conversations/{id}/members:
+    post:
+      consumes:
+      - application/json
+      description: Only the group owner or an admin can add users. Existing members
+        are ignored.
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Users to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddMembersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AddMembersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add members to a group conversation
       tags:
       - conversations
   /conversations/{id}/messages:
