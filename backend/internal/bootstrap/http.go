@@ -14,6 +14,7 @@ import (
 	"github.com/jetomax/realtime-chat/backend/internal/infrastructure/security"
 	authusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/auth"
 	conversationusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/conversation"
+	messageusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/message"
 	userusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/user"
 )
 
@@ -64,9 +65,12 @@ func NewHTTPServer(cfg config.Config, resources *Resources) *http.Server {
 	conversationRepository := persistencerepository.NewConversation(resources.Database.ORM)
 	conversationService := conversationusecase.NewService(conversationRepository)
 	conversationHandler := httpdelivery.NewConversationHandler(conversationService)
+	messageRepository := persistencerepository.NewMessage(resources.Database.ORM)
+	messageService := messageusecase.NewService(messageRepository)
+	messageHandler := httpdelivery.NewMessageHandler(messageService)
 	return &http.Server{
 		Addr:         cfg.HTTPAddress(),
-		Handler:      httpdelivery.NewRouter(cfg.AppEnv, authHandler, userHandler, conversationHandler, tokenManager, resources.Errors, resources.Database.Ping, resources.Redis.Ping),
+		Handler:      httpdelivery.NewRouter(cfg.AppEnv, authHandler, userHandler, conversationHandler, messageHandler, tokenManager, resources.Errors, resources.Database.Ping, resources.Redis.Ping),
 		ReadTimeout:  cfg.HTTPReadTimeout,
 		WriteTimeout: cfg.HTTPWriteTimeout,
 	}

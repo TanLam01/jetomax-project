@@ -59,6 +59,8 @@ func resourceError(c *gin.Context, err error) {
 		respondError(c, http.StatusBadRequest, "validation_error", err.Error())
 	case errors.Is(err, domainerrors.ErrNotFound):
 		respondError(c, http.StatusNotFound, "not_found", "resource not found")
+	case errors.Is(err, domainerrors.ErrForbidden):
+		respondError(c, http.StatusForbidden, "conversation_access_denied", "user is not a conversation member")
 	default:
 		respondError(c, http.StatusInternalServerError, "internal_error", "an internal error occurred")
 	}

@@ -71,8 +71,36 @@ definitions:
     - email
     - password
     type: object
+  dto.MessagePageResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.MessageResponse'
+        type: array
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
   dto.MessagePreviewResponse:
     properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      sender_id:
+        type: string
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.MessageResponse:
+    properties:
+      client_message_id:
+        type: string
+      conversation_id:
+        type: string
       created_at:
         type: string
       id:
@@ -301,6 +329,52 @@ paths:
       summary: List conversations for the authenticated member
       tags:
       - conversations
+  /conversations/{id}/messages:
+    get:
+      description: Returns messages newest-first using cursor pagination. Only conversation
+        members may access this endpoint.
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Opaque cursor returned by the previous response
+        in: query
+        name: cursor
+        type: string
+      - description: Page size (default 20, maximum 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MessagePageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get conversation message history
+      tags:
+      - messages
   /conversations/direct:
     post:
       consumes:

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/jetomax/realtime-chat/backend/internal/domain/entity"
 )
@@ -31,6 +32,5 @@ type ConversationRepository interface {
 }
 
 type MessageRepository interface {
-	Create(context.Context, *entity.Message) error
-	ListByConversation(context.Context, string, string, int) ([]entity.Message, error)
+	ListForMember(context.Context, string, string, *time.Time, string, int) ([]entity.Message, error)
 }

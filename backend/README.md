@@ -51,6 +51,7 @@ The scaffold does not automatically load `.env`; export the variables in your sh
 - `GET /api/v1/conversations` — member conversations with last message and unread count
 - `POST /api/v1/conversations/direct` — create or return an existing direct conversation
 - `POST /api/v1/conversations/groups` — create a group; creator becomes owner
+- `GET /api/v1/conversations/{id}/messages?cursor=&limit=` — cursor-paginated message history
 
 The users and conversations endpoints require `Authorization: Bearer <access_token>`.
 
