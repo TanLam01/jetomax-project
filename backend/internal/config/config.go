@@ -21,6 +21,12 @@ type Config struct {
 	AccessTokenTTL      time.Duration
 	RefreshTokenTTL     time.Duration
 	ErrorLogPath        string
+	S3Endpoint          string
+	S3Region            string
+	S3Bucket            string
+	S3AccessKey         string
+	S3SecretKey         string
+	S3UsePathStyle      bool
 }
 
 func (c Config) HTTPAddress() string { return c.HTTPHost + ":" + c.HTTPPort }
@@ -37,6 +43,12 @@ func Load() (Config, error) {
 		RedisURL:        envOrDefault("REDIS_URL", "redis://localhost:6379/0"),
 		JWTAccessSecret: envOrDefault("JWT_ACCESS_SECRET", "local-development-secret-change-me"),
 		ErrorLogPath:    envOrDefault("ERROR_LOG_PATH", "logs/error.log"),
+		S3Endpoint:      envOrDefault("S3_ENDPOINT", "http://localhost:9000"),
+		S3Region:        envOrDefault("S3_REGION", "us-east-1"),
+		S3Bucket:        envOrDefault("S3_BUCKET", "chat-media"),
+		S3AccessKey:     envOrDefault("S3_ACCESS_KEY", "minio"),
+		S3SecretKey:     envOrDefault("S3_SECRET_KEY", "change-me"),
+		S3UsePathStyle:  envOrDefault("S3_USE_PATH_STYLE", "true") == "true",
 	}
 
 	var err error

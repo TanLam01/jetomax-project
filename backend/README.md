@@ -34,6 +34,15 @@ docker compose up --build -d
 docker compose logs -f api
 ```
 
+Docker Compose also starts MinIO for image storage and creates the configured bucket automatically:
+
+- S3 API: `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
+
+MinIO data is persisted on the host at `backend/data/minio`. Recreating, stopping, or removing the MinIO container does not remove uploaded files. The directory is excluded from Git; back it up separately in production. Avoid deleting this directory when data must be retained.
+
+`POST /api/v1/media/uploads` returns a pre-signed `PUT` URL. Upload the binary directly to that URL using exactly the returned headers before `expires_at`.
+
 The scaffold does not automatically load `.env`; export the variables in your shell or use your preferred dotenv runner. `DATABASE_URL` is required. `REDIS_URL` defaults to `redis://localhost:6379/0`.
 
 - `GET http://localhost:8080/health/ready`
@@ -54,6 +63,7 @@ The scaffold does not automatically load `.env`; export the variables in your sh
 - `POST /api/v1/conversations/{id}/members` — owner/admin adds group members
 - `DELETE /api/v1/conversations/{id}/members/{userId}` — remove a member or leave a group
 - `GET /api/v1/conversations/{id}/messages?cursor=&limit=` — cursor-paginated message history
+- `POST /api/v1/media/uploads` — create a pre-signed JPEG/PNG/WebP upload URL
 
 The users and conversations endpoints require `Authorization: Bearer <access_token>`.
 

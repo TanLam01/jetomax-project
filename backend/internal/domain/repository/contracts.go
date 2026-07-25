@@ -25,6 +25,14 @@ type ErrorRecorder interface {
 	Record(context.Context, entity.RequestError) error
 }
 
+type MediaUploadRepository interface {
+	Create(context.Context, *entity.MediaUpload) error
+}
+
+type UploadSigner interface {
+	PresignPut(context.Context, string, string, int64, time.Duration) (string, map[string]string, error)
+}
+
 type ConversationRepository interface {
 	ListForUser(context.Context, string, int) ([]entity.ConversationSummary, error)
 	CreateDirect(context.Context, string, string, string) (*entity.ConversationSummary, bool, error)

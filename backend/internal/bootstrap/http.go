@@ -12,8 +12,10 @@ import (
 	"github.com/jetomax/realtime-chat/backend/internal/infrastructure/persistence"
 	persistencerepository "github.com/jetomax/realtime-chat/backend/internal/infrastructure/persistence/repository"
 	"github.com/jetomax/realtime-chat/backend/internal/infrastructure/security"
+	"github.com/jetomax/realtime-chat/backend/internal/infrastructure/storage"
 	authusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/auth"
 	conversationusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/conversation"
+	mediausecase "github.com/jetomax/realtime-chat/backend/internal/usecase/media"
 	messageusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/message"
 	userusecase "github.com/jetomax/realtime-chat/backend/internal/usecase/user"
 )
@@ -22,6 +24,7 @@ type Resources struct {
 	Database *persistence.Database
 	Redis    *cache.Redis
 	Errors   *errorlog.Recorder
+	Storage  *storage.S3
 }
 
 func Connect(ctx context.Context, cfg config.Config) (*Resources, error) {
@@ -40,7 +43,14 @@ func Connect(ctx context.Context, cfg config.Config) (*Resources, error) {
 		_ = database.Close()
 		return nil, err
 	}
-	return &Resources{Database: database, Redis: redisClient, Errors: errorRecorder}, nil
+	objectStorage, err := storage.NewS3(ctx, cfg.S3Endpoint, cfg.S3Region, cfg.S3Bucket, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3UsePathStyle)
+	if err != nil {
+		_ = errorRecorder.Close()
+		_ = redisClient.Close()
+		_ = database.Close()
+		return nil, err
+	}
+	return &Resources{Database: database, Redis: redisClient, Errors: errorRecorder, Storage: objectStorage}, nil
 }
 
 func (r *Resources) Close() error {
@@ -68,9 +78,12 @@ func NewHTTPServer(cfg config.Config, resources *Resources) *http.Server {
 	messageRepository := persistencerepository.NewMessage(resources.Database.ORM)
 	messageService := messageusecase.NewService(messageRepository)
 	messageHandler := httpdelivery.NewMessageHandler(messageService)
+	mediaRepository := persistencerepository.NewMediaUpload(resources.Database.ORM)
+	mediaService := mediausecase.NewService(mediaRepository, resources.Storage)
+	mediaHandler := httpdelivery.NewMediaHandler(mediaService)
 	return &http.Server{
 		Addr:         cfg.HTTPAddress(),
-		Handler:      httpdelivery.NewRouter(cfg.AppEnv, authHandler, userHandler, conversationHandler, messageHandler, tokenManager, resources.Errors, resources.Database.Ping, resources.Redis.Ping),
+		Handler:      httpdelivery.NewRouter(cfg.AppEnv, authHandler, userHandler, conversationHandler, messageHandler, mediaHandler, tokenManager, resources.Errors, resources.Database.Ping, resources.Redis.Ping),
 		ReadTimeout:  cfg.HTTPReadTimeout,
 		WriteTimeout: cfg.HTTPWriteTimeout,
 	}

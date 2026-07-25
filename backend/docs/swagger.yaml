@@ -67,6 +67,36 @@ definitions:
     - member_ids
     - name
     type: object
+  dto.CreateMediaUploadRequest:
+    properties:
+      file_name:
+        type: string
+      mime_type:
+        type: string
+      size:
+        type: integer
+    required:
+    - file_name
+    - mime_type
+    - size
+    type: object
+  dto.CreateMediaUploadResponse:
+    properties:
+      expires_at:
+        type: string
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      method:
+        type: string
+      object_key:
+        type: string
+      upload_id:
+        type: string
+      upload_url:
+        type: string
+    type: object
   dto.ErrorDetail:
     properties:
       code:
@@ -573,6 +603,43 @@ paths:
       summary: Create a group conversation
       tags:
       - conversations
+  /media/uploads:
+    post:
+      consumes:
+      - application/json
+      description: Accepts JPEG, PNG or WebP metadata up to 10 MB and returns a pre-signed
+        S3/MinIO PUT URL valid for 15 minutes.
+      parameters:
+      - description: Image metadata
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateMediaUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateMediaUploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a pre-signed image upload
+      tags:
+      - media
   /users:
     get:
       parameters:

@@ -3,4 +3,5 @@ bin/
 coverage.out
 *.log
 logs/
+data/minio/
 tmp/

@@ -12,6 +12,9 @@ services:
       DATABASE_URL: ${DATABASE_URL_DOCKER}
       REDIS_URL: redis://host.docker.internal:6379/0
       ERROR_LOG_PATH: /app/logs/error.log
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -19,3 +22,33 @@ services:
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
+
+  minio:
+    container_name: jetomax-minio
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data/minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "${S3_ACCESS_KEY}" "${S3_SECRET_KEY}" &&
+        mc mb --ignore-existing "local/${S3_BUCKET}"

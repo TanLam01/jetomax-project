@@ -15,7 +15,7 @@ import (
 
 type HealthCheck func(context.Context) error
 
-func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHandler, conversationHandler *ConversationHandler, messageHandler *MessageHandler, verifier AccessTokenVerifier, errorRecorder repository.ErrorRecorder, checks ...HealthCheck) *gin.Engine {
+func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHandler, conversationHandler *ConversationHandler, messageHandler *MessageHandler, mediaHandler *MediaHandler, verifier AccessTokenVerifier, errorRecorder repository.ErrorRecorder, checks ...HealthCheck) *gin.Engine {
 	if environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -59,6 +59,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 	protected.POST("/conversations/:id/members", conversationHandler.AddMembers)
 	protected.DELETE("/conversations/:id/members/:userId", conversationHandler.RemoveMember)
 	protected.GET("/conversations/:id/messages", messageHandler.List)
+	protected.POST("/media/uploads", mediaHandler.CreateUpload)
 	router.NoRoute(func(c *gin.Context) {
 		respondError(c, http.StatusNotFound, "route_not_found", "route not found")
 	})
