@@ -875,6 +875,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "peer_user_id": {
+                    "type": "string"
+                },
                 "role": {
                     "type": "string"
                 },

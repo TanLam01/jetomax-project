@@ -28,6 +28,7 @@ type conversationRow struct {
 	UpdatedAt            time.Time
 	Role                 string
 	UnreadCount          int64
+	PeerUserID           sql.NullString
 	LastMessageID        sql.NullString
 	LastSenderID         sql.NullString
 	LastMessageType      sql.NullString
@@ -66,7 +67,13 @@ func (r *Conversation) CreateDirect(ctx context.Context, creatorID, targetID, di
 				return translate(err)
 			}
 		}
-		result = entity.ConversationSummary{Conversation: conversationToEntity(model), Role: "member"}
+		var peer gormmodel.User
+		if err := tx.First(&peer, "id = ?", targetID).Error; err != nil {
+			return translate(err)
+		}
+		conversation := conversationToEntity(model)
+		conversation.Name, conversation.AvatarKey = peer.DisplayName, valueOrEmpty(peer.AvatarKey)
+		result = entity.ConversationSummary{Conversation: conversation, Role: "member", PeerUserID: targetID}
 		return nil
 	})
 	return &result, created, err
@@ -212,10 +219,20 @@ func conversationToEntity(model gormmodel.Conversation) entity.Conversation {
 		CreatedBy: model.CreatedBy, CreatedAt: model.CreatedAt, UpdatedAt: model.UpdatedAt}
 }
 
+func valueOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 func (r *Conversation) ListForUser(ctx context.Context, userID string, limit int) ([]entity.ConversationSummary, error) {
 	var rows []conversationRow
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT c.id, c.type::text AS type, c.name, c.avatar_key, c.created_by,
+		SELECT c.id, c.type::text AS type,
+		       CASE WHEN c.type = 'direct' THEN peer.display_name ELSE c.name END AS name,
+		       CASE WHEN c.type = 'direct' THEN peer.avatar_key ELSE c.avatar_key END AS avatar_key,
+		       c.created_by, peer.user_id AS peer_user_id,
 		       c.created_at, c.updated_at, cm.role::text AS role,
 		       COALESCE((
 		           SELECT COUNT(*) FROM messages unread
@@ -233,12 +250,19 @@ func (r *Conversation) ListForUser(ctx context.Context, userID string, limit int
 		FROM conversation_members cm
 		JOIN conversations c ON c.id = cm.conversation_id
 		LEFT JOIN LATERAL (
+		    SELECT u.id AS user_id, u.display_name, u.avatar_key
+		    FROM conversation_members peer_member
+		    JOIN users u ON u.id = peer_member.user_id
+		    WHERE peer_member.conversation_id = c.id AND peer_member.user_id <> ?
+		    LIMIT 1
+		) peer ON c.type = 'direct'
+		LEFT JOIN LATERAL (
 		    SELECT m.* FROM messages m WHERE m.conversation_id = c.id
 		    ORDER BY m.created_at DESC, m.id DESC LIMIT 1
 		) last_message ON true
 		WHERE cm.user_id = ?
 		ORDER BY COALESCE(last_message.created_at, c.updated_at) DESC, c.id DESC
-		LIMIT ?`, userID, userID, limit).Scan(&rows).Error
+		LIMIT ?`, userID, userID, userID, limit).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +271,7 @@ func (r *Conversation) ListForUser(ctx context.Context, userID string, limit int
 		summary := entity.ConversationSummary{Conversation: entity.Conversation{
 			ID: row.ID, Type: row.Type, Name: row.Name.String, AvatarKey: row.AvatarKey.String,
 			CreatedBy: row.CreatedBy, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		}, Role: row.Role, UnreadCount: row.UnreadCount}
+		}, Role: row.Role, UnreadCount: row.UnreadCount, PeerUserID: row.PeerUserID.String}
 		if row.LastMessageID.Valid {
 			summary.LastMessage = &entity.Message{ID: row.LastMessageID.String, ConversationID: row.ID,
 				SenderID: row.LastSenderID.String, Type: row.LastMessageType.String, Text: row.LastMessageText.String,

@@ -24,6 +24,7 @@ type ConversationResponse struct {
 	LastMessage *MessagePreviewResponse `json:"last_message"`
 	CreatedAt   string                  `json:"created_at"`
 	UpdatedAt   string                  `json:"updated_at"`
+	PeerUserID  string                  `json:"peer_user_id,omitempty"`
 }
 
 type ConversationListResponse struct {
@@ -52,7 +53,7 @@ func NewConversationResponse(item entity.ConversationSummary) ConversationRespon
 	response := ConversationResponse{ID: item.Conversation.ID, Type: item.Conversation.Type,
 		Name: item.Conversation.Name, AvatarKey: item.Conversation.AvatarKey, Role: item.Role,
 		UnreadCount: item.UnreadCount, CreatedAt: item.Conversation.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: item.Conversation.UpdatedAt.Format(time.RFC3339)}
+		UpdatedAt: item.Conversation.UpdatedAt.Format(time.RFC3339), PeerUserID: item.PeerUserID}
 	if item.LastMessage != nil {
 		response.LastMessage = &MessagePreviewResponse{ID: item.LastMessage.ID, SenderID: item.LastMessage.SenderID,
 			Type: item.LastMessage.Type, Text: item.LastMessage.Text, CreatedAt: item.LastMessage.CreatedAt.Format(time.RFC3339)}

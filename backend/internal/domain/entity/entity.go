@@ -42,6 +42,7 @@ type ConversationSummary struct {
 	Role         string
 	UnreadCount  int64
 	LastMessage  *Message
+	PeerUserID   string
 }
 
 type Message struct {
