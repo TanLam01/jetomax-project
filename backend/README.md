@@ -1,6 +1,6 @@
 # Realtime Chat Backend
 
-Initial Go backend scaffold following the Clean Architecture boundaries in `plan requirement.md`.
+Go REST and WebSocket backend following the Clean Architecture boundaries in `plan requirement.md`.
 
 ## Requirements
 
@@ -77,7 +77,7 @@ The `after` response is oldest-first so it can be appended in order. Continue wi
 
 Supported WebSocket client events are `message.send`, `typing.start`, `typing.stop`, and `conversation.read`. Server events are `message.created`, `message.ack`, `presence.changed`, `typing.changed`, `conversation.updated`, and `error`.
 
-The scaffold does not automatically load `.env`; export the variables in your shell or use your preferred dotenv runner. `DATABASE_URL` is required. `REDIS_URL` defaults to `redis://localhost:6379/0`.
+The application automatically loads a local `.env`; variables already exported by the process take precedence. `DATABASE_URL` is required. `REDIS_URL` defaults to `redis://localhost:6379/0`.
 
 - `GET http://localhost:8080/health/ready`
 - `GET http://localhost:8080/api/v1/`
@@ -98,7 +98,7 @@ The scaffold does not automatically load `.env`; export the variables in your sh
 - `DELETE /api/v1/conversations/{id}/members/{userId}` — remove a member or leave a group
 - `GET /api/v1/conversations/{id}/messages?cursor=&limit=` — cursor-paginated message history
 - `POST /api/v1/media/uploads` — create a pre-signed JPEG/PNG/WebP upload URL
-- `GET /ws` — authenticated WebSocket gateway (`message.send`, `message.ack`, `message.created`)
+- `GET /ws` — authenticated WebSocket gateway for messages, typing, presence, read state, and conversation updates
 
 The users and conversations endpoints require `Authorization: Bearer <access_token>`.
 
