@@ -27,12 +27,13 @@ type messageCursor struct {
 
 // List godoc
 // @Summary Get conversation message history
-// @Description Returns messages newest-first using cursor pagination. Only conversation members may access this endpoint.
+// @Description Returns messages newest-first with cursor, or missed messages oldest-first with after. Only conversation members may access this endpoint.
 // @Tags messages
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Conversation UUID"
 // @Param cursor query string false "Opaque cursor returned by the previous response"
+// @Param after query string false "Opaque cursor of the last received message; returns newer messages for reconnect sync"
 // @Param limit query int false "Page size (default 20, maximum 100)"
 // @Success 200 {object} dto.MessagePageResponse
 // @Failure 400 {object} dto.ErrorResponse
@@ -59,7 +60,21 @@ func (h *MessageHandler) List(c *gin.Context) {
 		validationError(c, err.Error())
 		return
 	}
-	page, err := h.service.List(c.Request.Context(), authenticatedUserID(c), c.Param("id"), cursor, limit)
+	if c.Query("cursor") != "" && c.Query("after") != "" {
+		validationError(c, "cursor and after cannot be used together")
+		return
+	}
+	var page *messageusecase.Page
+	if c.Query("after") != "" {
+		after, decodeErr := decodeMessageCursor(c.Query("after"))
+		if decodeErr != nil {
+			validationError(c, decodeErr.Error())
+			return
+		}
+		page, err = h.service.SyncAfter(c.Request.Context(), authenticatedUserID(c), c.Param("id"), *after, limit)
+	} else {
+		page, err = h.service.List(c.Request.Context(), authenticatedUserID(c), c.Param("id"), cursor, limit)
+	}
 	if err != nil {
 		resourceError(c, err)
 		return
@@ -72,7 +87,19 @@ func (h *MessageHandler) List(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, dto.NewMessagePageResponse(page.Messages, page.HasMore, nextCursor))
+	syncCursor := ""
+	if len(page.Messages) > 0 {
+		syncMessage := page.Messages[0]
+		if c.Query("after") != "" {
+			syncMessage = page.Messages[len(page.Messages)-1]
+		}
+		syncCursor, err = encodeMessageCursor(syncMessage)
+		if err != nil {
+			resourceError(c, err)
+			return
+		}
+	}
+	c.JSON(http.StatusOK, dto.NewMessagePageResponse(page.Messages, page.HasMore, nextCursor, syncCursor))
 }
 
 func decodeMessageCursor(raw string) (*messageusecase.Cursor, error) {

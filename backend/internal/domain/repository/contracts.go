@@ -27,6 +27,19 @@ type ErrorRecorder interface {
 
 type MediaUploadRepository interface {
 	Create(context.Context, *entity.MediaUpload) error
+	FindForUser(context.Context, string, string) (*entity.MediaUpload, error)
+}
+
+type UploadInspector interface {
+	VerifyObject(context.Context, string, string, int64) error
+}
+
+type DownloadSigner interface {
+	PresignGet(context.Context, string, time.Duration) (string, error)
+}
+
+type MediaAttachmentRepository interface {
+	FindAttachmentForMember(context.Context, string, string) (*entity.MessageAttachment, error)
 }
 
 type UploadSigner interface {
@@ -43,4 +56,24 @@ type ConversationRepository interface {
 
 type MessageRepository interface {
 	ListForMember(context.Context, string, string, *time.Time, string, int) ([]entity.Message, error)
+	ListAfterForMember(context.Context, string, string, time.Time, string, int) ([]entity.Message, error)
+	Send(context.Context, entity.Message) (*entity.SendMessageResult, error)
+	RecipientIDsForMember(context.Context, string, string) ([]string, error)
+	PeerIDsForUser(context.Context, string) ([]string, error)
+	MarkRead(context.Context, string, string, string) error
+}
+
+type MessagePublisher interface {
+	PublishMessage(context.Context, entity.MessageEvent) error
+}
+
+type RealtimePublisher interface {
+	PublishRealtime(context.Context, entity.RealtimeEvent) error
+}
+
+type PresenceTracker interface {
+	ConnectPresence(context.Context, string, string) (bool, error)
+	TouchPresence(context.Context, string, string) error
+	DisconnectPresence(context.Context, string, string) (bool, error)
+	OnlinePresence(context.Context, []string) (map[string]bool, error)
 }

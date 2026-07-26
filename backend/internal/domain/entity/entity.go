@@ -52,4 +52,36 @@ type Message struct {
 	Text            string
 	ClientMessageID string
 	CreatedAt       time.Time
+	Attachment      *MessageAttachment
+}
+
+type MessageAttachment struct {
+	ID        string
+	MessageID string
+	UploadID  string
+	ObjectKey string
+	MIMEType  string
+	Size      int64
+}
+
+type SendMessageResult struct {
+	Message      Message
+	RecipientIDs []string
+	Created      bool
+}
+
+type MessageEvent struct {
+	EventID      string    `json:"event_id"`
+	RecipientIDs []string  `json:"recipient_user_ids"`
+	Message      Message   `json:"message"`
+	Timestamp    time.Time `json:"timestamp"`
+}
+
+type RealtimeEvent struct {
+	Type         string    `json:"type"`
+	EventID      string    `json:"event_id"`
+	RequestID    string    `json:"request_id"`
+	RecipientIDs []string  `json:"recipient_user_ids"`
+	Timestamp    time.Time `json:"timestamp"`
+	Payload      any       `json:"payload"`
 }

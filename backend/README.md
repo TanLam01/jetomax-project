@@ -43,6 +43,40 @@ MinIO data is persisted on the host at `backend/data/minio`. Recreating, stoppin
 
 `POST /api/v1/media/uploads` returns a pre-signed `PUT` URL. Upload the binary directly to that URL using exactly the returned headers before `expires_at`.
 
+After the PUT succeeds, send the image through `/ws` using the returned `upload_id` (never trust or send an arbitrary object key):
+
+```json
+{
+  "type": "message.send",
+  "request_id": "request-001",
+  "payload": {
+    "conversation_id": "<conversation UUID>",
+    "client_message_id": "<new UUID>",
+    "message_type": "image",
+    "text": "Optional caption",
+    "upload_id": "<upload_id from POST /api/v1/media/uploads>"
+  }
+}
+```
+
+The backend verifies ownership and the object metadata in MinIO before creating the message attachment. An upload can only be attached to one message.
+
+Conversation members resolve a private attachment to a 15-minute signed URL with:
+
+```text
+GET /api/v1/media/attachments/{attachmentId}/download
+```
+
+For reconnect synchronization, persist `sync_cursor` from the latest message response and call:
+
+```text
+GET /api/v1/conversations/{id}/messages?after={sync_cursor}&limit=100
+```
+
+The `after` response is oldest-first so it can be appended in order. Continue with `next_cursor` as the next `after` value while `has_more` is true, and persist the newest returned `sync_cursor`.
+
+Supported WebSocket client events are `message.send`, `typing.start`, `typing.stop`, and `conversation.read`. Server events are `message.created`, `message.ack`, `presence.changed`, `typing.changed`, `conversation.updated`, and `error`.
+
 The scaffold does not automatically load `.env`; export the variables in your shell or use your preferred dotenv runner. `DATABASE_URL` is required. `REDIS_URL` defaults to `redis://localhost:6379/0`.
 
 - `GET http://localhost:8080/health/ready`
@@ -64,6 +98,7 @@ The scaffold does not automatically load `.env`; export the variables in your sh
 - `DELETE /api/v1/conversations/{id}/members/{userId}` — remove a member or leave a group
 - `GET /api/v1/conversations/{id}/messages?cursor=&limit=` — cursor-paginated message history
 - `POST /api/v1/media/uploads` — create a pre-signed JPEG/PNG/WebP upload URL
+- `GET /ws` — authenticated WebSocket gateway (`message.send`, `message.ack`, `message.created`)
 
 The users and conversations endpoints require `Authorization: Bearer <access_token>`.
 

@@ -2,10 +2,13 @@ package http
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	wsdelivery "github.com/jetomax/realtime-chat/backend/internal/delivery/websocket"
 	"github.com/jetomax/realtime-chat/backend/internal/domain/repository"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -15,7 +18,7 @@ import (
 
 type HealthCheck func(context.Context) error
 
-func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHandler, conversationHandler *ConversationHandler, messageHandler *MessageHandler, mediaHandler *MediaHandler, verifier AccessTokenVerifier, errorRecorder repository.ErrorRecorder, checks ...HealthCheck) *gin.Engine {
+func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHandler, conversationHandler *ConversationHandler, messageHandler *MessageHandler, mediaHandler *MediaHandler, websocketHandler *wsdelivery.Handler, verifier AccessTokenVerifier, errorRecorder repository.ErrorRecorder, checks ...HealthCheck) *gin.Engine {
 	if environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -25,7 +28,12 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 	if errorRecorder != nil {
 		router.Use(ErrorAudit(errorRecorder))
 	}
-	router.Use(gin.Recovery())
+	router.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
+		slog.Error("HTTP handler panic", "error", recovered, "stack", string(debug.Stack()))
+		if !c.Writer.Written() {
+			respondError(c, http.StatusInternalServerError, "handler_panic", "handler panic")
+		}
+	}))
 	router.GET("/health/ready", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
@@ -38,6 +46,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 		c.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/ws", RequireAuth(verifier), websocketHandler.Connect)
 
 	v1 := router.Group("/api/v1")
 	v1.GET("/", func(c *gin.Context) {
@@ -60,6 +69,7 @@ func NewRouter(environment string, authHandler *AuthHandler, userHandler *UserHa
 	protected.DELETE("/conversations/:id/members/:userId", conversationHandler.RemoveMember)
 	protected.GET("/conversations/:id/messages", messageHandler.List)
 	protected.POST("/media/uploads", mediaHandler.CreateUpload)
+	protected.GET("/media/attachments/:id/download", mediaHandler.CreateDownload)
 	router.NoRoute(func(c *gin.Context) {
 		respondError(c, http.StatusNotFound, "route_not_found", "route not found")
 	})

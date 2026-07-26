@@ -40,3 +40,25 @@ func (h *MediaHandler) CreateUpload(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, dto.NewCreateMediaUploadResponse(upload))
 }
+
+// CreateDownload godoc
+// @Summary Create a signed image download URL
+// @Description Returns a short-lived URL only when the authenticated user is a member of the attachment conversation.
+// @Tags media
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Attachment UUID"
+// @Success 200 {object} dto.MediaDownloadResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /media/attachments/{id}/download [get]
+func (h *MediaHandler) CreateDownload(c *gin.Context) {
+	download, err := h.service.CreateDownload(c.Request.Context(), authenticatedUserID(c), c.Param("id"))
+	if err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewMediaDownloadResponse(download))
+}

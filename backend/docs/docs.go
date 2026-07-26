@@ -539,7 +539,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns messages newest-first using cursor pagination. Only conversation members may access this endpoint.",
+                "description": "Returns messages newest-first with cursor, or missed messages oldest-first with after. Only conversation members may access this endpoint.",
                 "produces": [
                     "application/json"
                 ],
@@ -559,6 +559,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Opaque cursor returned by the previous response",
                         "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Opaque cursor of the last received message; returns newer messages for reconnect sync",
+                        "name": "after",
                         "in": "query"
                     },
                     {
@@ -589,6 +595,64 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/media/attachments/{id}/download": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a short-lived URL only when the authenticated user is a member of the attachment conversation.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Create a signed image download URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Attachment UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.MediaDownloadResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -936,6 +1000,34 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.MediaDownloadResponse": {
+            "type": "object",
+            "properties": {
+                "download_url": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.MessageAttachmentResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "mime_type": {
+                    "type": "string"
+                },
+                "object_key": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.MessagePageResponse": {
             "type": "object",
             "properties": {
@@ -949,6 +1041,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "next_cursor": {
+                    "type": "string"
+                },
+                "sync_cursor": {
                     "type": "string"
                 }
             }
@@ -976,6 +1071,9 @@ const docTemplate = `{
         "dto.MessageResponse": {
             "type": "object",
             "properties": {
+                "attachment": {
+                    "$ref": "#/definitions/dto.MessageAttachmentResponse"
+                },
                 "client_message_id": {
                     "type": "string"
                 },

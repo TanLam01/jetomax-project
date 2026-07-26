@@ -21,8 +21,17 @@ type CreateMediaUploadResponse struct {
 	ExpiresAt string            `json:"expires_at"`
 }
 
+type MediaDownloadResponse struct {
+	DownloadURL string `json:"download_url"`
+	ExpiresAt   string `json:"expires_at"`
+}
+
 func NewCreateMediaUploadResponse(upload *mediausecase.Upload) CreateMediaUploadResponse {
 	return CreateMediaUploadResponse{UploadID: upload.ID, ObjectKey: upload.ObjectKey,
 		UploadURL: upload.UploadURL, Method: "PUT", Headers: upload.Headers,
 		ExpiresAt: upload.ExpiresAt.Format(time.RFC3339)}
+}
+
+func NewMediaDownloadResponse(download *mediausecase.Download) MediaDownloadResponse {
+	return MediaDownloadResponse{DownloadURL: download.URL, ExpiresAt: download.ExpiresAt.Format(time.RFC3339)}
 }

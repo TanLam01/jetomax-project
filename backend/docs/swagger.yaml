@@ -119,6 +119,24 @@ definitions:
     - email
     - password
     type: object
+  dto.MediaDownloadResponse:
+    properties:
+      download_url:
+        type: string
+      expires_at:
+        type: string
+    type: object
+  dto.MessageAttachmentResponse:
+    properties:
+      id:
+        type: string
+      mime_type:
+        type: string
+      object_key:
+        type: string
+      size:
+        type: integer
+    type: object
   dto.MessagePageResponse:
     properties:
       data:
@@ -128,6 +146,8 @@ definitions:
       has_more:
         type: boolean
       next_cursor:
+        type: string
+      sync_cursor:
         type: string
     type: object
   dto.MessagePreviewResponse:
@@ -145,6 +165,8 @@ definitions:
     type: object
   dto.MessageResponse:
     properties:
+      attachment:
+        $ref: '#/definitions/dto.MessageAttachmentResponse'
       client_message_id:
         type: string
       conversation_id:
@@ -474,8 +496,8 @@ paths:
       - conversations
   /conversations/{id}/messages:
     get:
-      description: Returns messages newest-first using cursor pagination. Only conversation
-        members may access this endpoint.
+      description: Returns messages newest-first with cursor, or missed messages oldest-first
+        with after. Only conversation members may access this endpoint.
       parameters:
       - description: Conversation UUID
         in: path
@@ -485,6 +507,11 @@ paths:
       - description: Opaque cursor returned by the previous response
         in: query
         name: cursor
+        type: string
+      - description: Opaque cursor of the last received message; returns newer messages
+          for reconnect sync
+        in: query
+        name: after
         type: string
       - description: Page size (default 20, maximum 100)
         in: query
@@ -603,6 +630,44 @@ paths:
       summary: Create a group conversation
       tags:
       - conversations
+  /media/attachments/{id}/download:
+    get:
+      description: Returns a short-lived URL only when the authenticated user is a
+        member of the attachment conversation.
+      parameters:
+      - description: Attachment UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MediaDownloadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a signed image download URL
+      tags:
+      - media
   /media/uploads:
     post:
       consumes:
