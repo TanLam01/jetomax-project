@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/chat_cubit.dart';
 import '../data/chat_repository.dart';
@@ -79,7 +80,16 @@ class _ChatPanelState extends State<ChatPanel> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             child: Row(
               children: [
-                if (MediaQuery.sizeOf(context).width < 800) const BackButton(),
+                if (MediaQuery.sizeOf(context).width < 800)
+                  BackButton(
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
+                  ),
                 CircleAvatar(
                   child: Text(
                     widget.title.isEmpty

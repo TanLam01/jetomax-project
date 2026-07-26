@@ -163,7 +163,14 @@ class ConversationPane extends StatelessWidget {
                       trailing: item.unreadCount > 0
                           ? Badge(label: Text('${item.unreadCount}'))
                           : null,
-                      onTap: () => context.go('/chat/${item.id}', extra: item),
+                      onTap: () {
+                        final location = '/chat/${item.id}';
+                        if (MediaQuery.sizeOf(context).width < 800) {
+                          context.push(location, extra: item);
+                        } else {
+                          context.go(location, extra: item);
+                        }
+                      },
                     );
                   },
                 ),
@@ -246,7 +253,10 @@ class _NewChatDialogState extends State<NewChatDialog> {
                         .createDirect(user);
                     if (!context.mounted || conversation == null) return;
                     Navigator.pop(context);
-                    context.go('/chat/${conversation.id}', extra: conversation);
+                    context.push(
+                      '/chat/${conversation.id}',
+                      extra: conversation,
+                    );
                   },
                 );
               },
