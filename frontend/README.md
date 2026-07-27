@@ -30,6 +30,7 @@ For a physical phone, use the development machine's LAN IP and allow the port th
 - Register, login, refresh rotation and logout
 - Secure token storage
 - User search and direct conversation creation
+- Group creation, member management, admin promotion/demotion and ownership transfer
 - Adaptive Messenger-style conversation/chat layout
 - Cursor history and missed-message synchronization after reconnect
 - Native authenticated WebSocket with exponential reconnect

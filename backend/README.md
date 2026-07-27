@@ -95,7 +95,10 @@ The application automatically loads a local `.env`; variables already exported b
 - `POST /api/v1/conversations/direct` — create or return an existing direct conversation
 - `POST /api/v1/conversations/groups` — create a group; creator becomes owner
 - `POST /api/v1/conversations/{id}/members` — owner/admin adds group members
+- `GET /api/v1/conversations/{id}/members` — group members and roles
 - `DELETE /api/v1/conversations/{id}/members/{userId}` — remove a member or leave a group
+- `PATCH /api/v1/conversations/{id}/members/{userId}/role` — owner promotes/demotes an admin
+- `POST /api/v1/conversations/{id}/ownership` — owner transfers ownership and becomes admin
 - `GET /api/v1/conversations/{id}/messages?cursor=&limit=` — cursor-paginated message history
 - `POST /api/v1/media/uploads` — create a pre-signed JPEG/PNG/WebP upload URL
 - `GET /ws` — authenticated WebSocket gateway for messages, typing, presence, read state, and conversation updates

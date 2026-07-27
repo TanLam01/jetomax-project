@@ -25,6 +25,28 @@ definitions:
           $ref: '#/definitions/dto.ConversationResponse'
         type: array
     type: object
+  dto.ConversationMemberListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.ConversationMemberResponse'
+        type: array
+    type: object
+  dto.ConversationMemberResponse:
+    properties:
+      avatar_key:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      joined_at:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+    type: object
   dto.ConversationResponse:
     properties:
       avatar_key:
@@ -219,6 +241,20 @@ definitions:
       user:
         $ref: '#/definitions/dto.UserResponse'
     type: object
+  dto.TransferOwnershipRequest:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  dto.UpdateMemberRoleRequest:
+    properties:
+      role:
+        type: string
+    required:
+    - role
+    type: object
   dto.UserListResponse:
     properties:
       data:
@@ -402,6 +438,42 @@ paths:
       tags:
       - conversations
   /conversations/{id}/members:
+    get:
+      description: Any group member may list member profiles and roles.
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ConversationMemberListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List group members
+      tags:
+      - conversations
     post:
       consumes:
       - application/json
@@ -496,6 +568,52 @@ paths:
       summary: Remove a member from a group or leave a group
       tags:
       - conversations
+  /conversations/{id}/members/{userId}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Only the owner may change another member between admin and member.
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target user UUID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateMemberRoleRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Promote or demote a group member
+      tags:
+      - conversations
   /conversations/{id}/messages:
     get:
       description: Returns messages newest-first with cursor, or missed messages oldest-first
@@ -547,6 +665,48 @@ paths:
       summary: Get conversation message history
       tags:
       - messages
+  /conversations/{id}/ownership:
+    post:
+      consumes:
+      - application/json
+      description: Only the current owner may transfer ownership to another member;
+        the previous owner becomes admin.
+      parameters:
+      - description: Conversation UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New owner
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TransferOwnershipRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Transfer group ownership
+      tags:
+      - conversations
   /conversations/direct:
     post:
       consumes:

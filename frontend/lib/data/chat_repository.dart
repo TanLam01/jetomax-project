@@ -59,6 +59,58 @@ class ChatRepository {
     return Conversation.fromJson(response.data!);
   }
 
+  Future<Conversation> createGroup(String name, List<String> memberIds) async {
+    final response = await api.dio.post<Map<String, dynamic>>(
+      '/conversations/groups',
+      data: {'name': name, 'avatar_key': '', 'member_ids': memberIds},
+    );
+    return Conversation.fromJson(response.data!);
+  }
+
+  Future<List<GroupMember>> groupMembers(String conversationId) async {
+    final response = await api.dio.get<Map<String, dynamic>>(
+      '/conversations/$conversationId/members',
+    );
+    return (response.data!['data'] as List)
+        .map((item) => GroupMember.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> addGroupMembers(
+    String conversationId,
+    List<String> userIds,
+  ) async {
+    await api.dio.post(
+      '/conversations/$conversationId/members',
+      data: {'user_ids': userIds},
+    );
+  }
+
+  Future<void> removeGroupMember(String conversationId, String userId) async {
+    await api.dio.delete('/conversations/$conversationId/members/$userId');
+  }
+
+  Future<void> updateGroupMemberRole(
+    String conversationId,
+    String userId,
+    String role,
+  ) async {
+    await api.dio.patch(
+      '/conversations/$conversationId/members/$userId/role',
+      data: {'role': role},
+    );
+  }
+
+  Future<void> transferGroupOwnership(
+    String conversationId,
+    String userId,
+  ) async {
+    await api.dio.post(
+      '/conversations/$conversationId/ownership',
+      data: {'user_id': userId},
+    );
+  }
+
   Future<MessagePage> messages(
     String conversationId, {
     String? cursor,

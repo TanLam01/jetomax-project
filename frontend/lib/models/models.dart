@@ -147,6 +147,34 @@ class Message {
 
 enum MessageStatus { pending, sent, failed }
 
+class GroupMember {
+  const GroupMember({
+    required this.userId,
+    required this.email,
+    required this.displayName,
+    required this.role,
+    required this.joinedAt,
+    this.avatarKey = '',
+  });
+
+  final String userId;
+  final String email;
+  final String displayName;
+  final String avatarKey;
+  final String role;
+  final DateTime joinedAt;
+
+  factory GroupMember.fromJson(Map<String, dynamic> json) => GroupMember(
+    userId: json['user_id'] as String,
+    email: json['email'] as String? ?? '',
+    displayName: json['display_name'] as String? ?? '',
+    avatarKey: json['avatar_key'] as String? ?? '',
+    role: json['role'] as String? ?? 'member',
+    joinedAt:
+        DateTime.tryParse(json['joined_at'] as String? ?? '') ?? DateTime.now(),
+  );
+}
+
 class MessagePage {
   const MessagePage({
     required this.messages,

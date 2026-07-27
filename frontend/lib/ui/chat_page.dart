@@ -7,18 +7,24 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../bloc/chat_cubit.dart';
+import '../bloc/conversations_cubit.dart';
 import '../data/chat_repository.dart';
 import '../models/models.dart';
 import 'conversations_page.dart';
+import 'group_info_dialog.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({
     super.key,
     required this.conversationId,
     required this.title,
+    required this.conversationType,
+    required this.currentRole,
   });
   final String conversationId;
   final String title;
+  final String conversationType;
+  final String currentRole;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +38,14 @@ class ChatPage extends StatelessWidget {
                 width: 380,
                 child: ConversationPane(selectedId: conversationId),
               ),
-            Expanded(child: ChatPanel(title: title)),
+            Expanded(
+              child: ChatPanel(
+                title: title,
+                conversationId: conversationId,
+                conversationType: conversationType,
+                currentRole: currentRole,
+              ),
+            ),
           ],
         ),
       ),
@@ -41,8 +54,17 @@ class ChatPage extends StatelessWidget {
 }
 
 class ChatPanel extends StatefulWidget {
-  const ChatPanel({super.key, required this.title});
+  const ChatPanel({
+    super.key,
+    required this.title,
+    required this.conversationId,
+    required this.conversationType,
+    required this.currentRole,
+  });
   final String title;
+  final String conversationId;
+  final String conversationType;
+  final String currentRole;
   @override
   State<ChatPanel> createState() => _ChatPanelState();
 }
@@ -123,10 +145,27 @@ class _ChatPanelState extends State<ChatPanel> {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.info_outline),
-                ),
+                if (widget.conversationType == 'group')
+                  IconButton(
+                    tooltip: 'Thông tin nhóm',
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<ChatCubit>()),
+                          BlocProvider.value(
+                            value: context.read<ConversationsCubit>(),
+                          ),
+                        ],
+                        child: GroupInfoDialog(
+                          conversationId: widget.conversationId,
+                          groupName: widget.title,
+                          initialRole: widget.currentRole,
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.info_outline),
+                  ),
               ],
             ),
           ),

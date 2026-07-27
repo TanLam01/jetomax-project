@@ -37,7 +37,7 @@ The repository is intentionally implemented as a modular monolith: it keeps loca
 - User profile lookup and user search
 - Direct conversation creation with duplicate prevention
 - Group creation, adding members, removing members, and leaving a group
-- Owner/admin/member authorization rules for existing group operations
+- Group member listing, owner/admin/member authorization, admin promotion/demotion, and ownership transfer
 - Conversation list ordered by recent activity, including last message and unread count
 - Member-protected cursor-paginated message history
 - Missed-message synchronization with an opaque `after` cursor
@@ -56,6 +56,7 @@ The repository is intentionally implemented as a modular monolith: it keeps loca
 - Register, login, automatic token refresh, and logout
 - Secure token storage
 - User search and direct chat creation
+- Group creation and group member/role management
 - Adaptive layout: one screen on mobile and conversation/chat split view on desktop
 - Real-time text messages with pending/sent state
 - Cursor history and missed-message synchronization after reconnect
@@ -66,9 +67,6 @@ The repository is intentionally implemented as a modular monolith: it keeps loca
 
 ## Not implemented yet
 
-- Flutter screens for creating groups and managing group members
-- Backend endpoint for listing group members
-- Promoting/demoting admins and transferring group ownership
 - Complete profile editing and avatar management
 - AI image-generation APIs and UI
 - Functional MCP tools/server transport for ChatGPT
@@ -76,8 +74,6 @@ The repository is intentionally implemented as a modular monolith: it keeps loca
 - Durable transactional outbox; the current Redis retry strategy is simpler and does not provide full delivery guarantees during prolonged outages
 - Persistent Flutter offline cache/outbox with Drift or Isar
 - Full WebSocket support for Flutter Web; authenticated WebSocket currently targets native platforms
-- Complete integration, E2E, concurrent fan-out, and load-test suites
-- Production deployment, observability, CI/CD, and backup automation
 
 ## Architecture and technical decisions
 
@@ -329,7 +325,7 @@ Database: POSTGRES_DB
 6. Send text or select an image from the composer.
 7. Observe real-time delivery, acknowledgement, typing, presence, and unread/read updates.
 
-Group messaging already uses the same message history and WebSocket flow after a group exists. The Flutter create/manage-group screens are still pending.
+Group messaging uses the same message history and WebSocket flow as direct chat. Owners can manage roles and transfer ownership from the group information dialog.
 
 ## API and WebSocket
 

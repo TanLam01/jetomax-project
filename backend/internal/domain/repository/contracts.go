@@ -52,6 +52,9 @@ type ConversationRepository interface {
 	CreateGroup(context.Context, string, entity.CreateGroupInput) (*entity.ConversationSummary, error)
 	AddMembers(context.Context, string, string, []string) ([]string, error)
 	RemoveMember(context.Context, string, string, string) error
+	ListMembers(context.Context, string, string) ([]entity.ConversationMember, error)
+	UpdateMemberRole(context.Context, string, string, string, string) error
+	TransferOwnership(context.Context, string, string, string) error
 }
 
 type MessageRepository interface {

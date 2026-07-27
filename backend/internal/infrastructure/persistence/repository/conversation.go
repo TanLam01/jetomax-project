@@ -207,6 +207,101 @@ func (r *Conversation) RemoveMember(ctx context.Context, conversationID, actorID
 	})
 }
 
+func (r *Conversation) ListMembers(ctx context.Context, conversationID, actorID string) ([]entity.ConversationMember, error) {
+	var conversation gormmodel.Conversation
+	if err := r.db.WithContext(ctx).First(&conversation, "id = ?", conversationID).Error; err != nil {
+		return nil, translate(err)
+	}
+	if conversation.Type != "group" {
+		return nil, fmt.Errorf("%w: members can only be listed for group conversations", domainerrors.ErrValidation)
+	}
+	var actorCount int64
+	if err := r.db.WithContext(ctx).Model(&gormmodel.ConversationMember{}).
+		Where("conversation_id = ? AND user_id = ?", conversationID, actorID).Count(&actorCount).Error; err != nil {
+		return nil, err
+	}
+	if actorCount == 0 {
+		return nil, domainerrors.ErrForbidden
+	}
+	var members []entity.ConversationMember
+	err := r.db.WithContext(ctx).Table("conversation_members AS member").
+		Select("member.user_id, users.email, users.display_name, COALESCE(users.avatar_key, '') AS avatar_key, member.role::text AS role, member.joined_at").
+		Joins("JOIN users ON users.id = member.user_id").
+		Where("member.conversation_id = ?", conversationID).
+		Order("CASE member.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, member.joined_at ASC").
+		Scan(&members).Error
+	return members, err
+}
+
+func (r *Conversation) UpdateMemberRole(ctx context.Context, conversationID, actorID, targetUserID, role string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var conversation gormmodel.Conversation
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&conversation, "id = ?", conversationID).Error; err != nil {
+			return translate(err)
+		}
+		if conversation.Type != "group" {
+			return fmt.Errorf("%w: roles only apply to group conversations", domainerrors.ErrValidation)
+		}
+		var actor gormmodel.ConversationMember
+		if err := tx.First(&actor, "conversation_id = ? AND user_id = ?", conversationID, actorID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainerrors.ErrForbidden
+			}
+			return err
+		}
+		if actor.Role != "owner" {
+			return domainerrors.ErrForbidden
+		}
+		var target gormmodel.ConversationMember
+		if err := tx.First(&target, "conversation_id = ? AND user_id = ?", conversationID, targetUserID).Error; err != nil {
+			return translate(err)
+		}
+		if target.Role == "owner" {
+			return fmt.Errorf("%w: owner role must be changed through ownership transfer", domainerrors.ErrValidation)
+		}
+		return tx.Model(&gormmodel.ConversationMember{}).
+			Where("conversation_id = ? AND user_id = ?", conversationID, targetUserID).
+			Update("role", role).Error
+	})
+}
+
+func (r *Conversation) TransferOwnership(ctx context.Context, conversationID, actorID, targetUserID string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var conversation gormmodel.Conversation
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&conversation, "id = ?", conversationID).Error; err != nil {
+			return translate(err)
+		}
+		if conversation.Type != "group" {
+			return fmt.Errorf("%w: ownership only applies to group conversations", domainerrors.ErrValidation)
+		}
+		var actor gormmodel.ConversationMember
+		if err := tx.First(&actor, "conversation_id = ? AND user_id = ?", conversationID, actorID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domainerrors.ErrForbidden
+			}
+			return err
+		}
+		if actor.Role != "owner" {
+			return domainerrors.ErrForbidden
+		}
+		if actorID == targetUserID {
+			return fmt.Errorf("%w: target user already owns the group", domainerrors.ErrValidation)
+		}
+		var target gormmodel.ConversationMember
+		if err := tx.First(&target, "conversation_id = ? AND user_id = ?", conversationID, targetUserID).Error; err != nil {
+			return translate(err)
+		}
+		if err := tx.Model(&gormmodel.ConversationMember{}).
+			Where("conversation_id = ? AND user_id = ?", conversationID, actorID).
+			Update("role", "admin").Error; err != nil {
+			return err
+		}
+		return tx.Model(&gormmodel.ConversationMember{}).
+			Where("conversation_id = ? AND user_id = ?", conversationID, targetUserID).
+			Update("role", "owner").Error
+	})
+}
+
 func conversationToEntity(model gormmodel.Conversation) entity.Conversation {
 	name, avatar := "", ""
 	if model.Name != nil {

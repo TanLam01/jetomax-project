@@ -191,11 +191,15 @@ class NewChatDialog extends StatefulWidget {
 
 class _NewChatDialogState extends State<NewChatDialog> {
   final query = TextEditingController();
+  final groupName = TextEditingController();
   List<User> results = const [];
+  final Map<String, User> selected = {};
   bool loading = false;
+  bool groupMode = false;
   @override
   void dispose() {
     query.dispose();
+    groupName.dispose();
     super.dispose();
   }
 
@@ -213,12 +217,61 @@ class _NewChatDialogState extends State<NewChatDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Tin nhắn mới'),
+    title: Text(groupMode ? 'Tạo nhóm chat' : 'Tin nhắn mới'),
     content: SizedBox(
       width: 420,
-      height: 360,
+      height: 480,
       child: Column(
         children: [
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.person_outline),
+                label: Text('Cá nhân'),
+              ),
+              ButtonSegment(
+                value: true,
+                icon: Icon(Icons.groups_outlined),
+                label: Text('Nhóm chat'),
+              ),
+            ],
+            selected: {groupMode},
+            onSelectionChanged: (value) => setState(() {
+              groupMode = value.first;
+              selected.clear();
+            }),
+          ),
+          const SizedBox(height: 12),
+          if (groupMode) ...[
+            TextField(
+              controller: groupName,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                labelText: 'Tên nhóm',
+                prefixIcon: Icon(Icons.group_outlined),
+              ),
+            ),
+            if (selected.isNotEmpty)
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: selected.values
+                      .map(
+                        (user) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: InputChip(
+                            label: Text(user.displayName),
+                            onDeleted: () =>
+                                setState(() => selected.remove(user.id)),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+          ],
           TextField(
             controller: query,
             autofocus: true,
@@ -239,6 +292,25 @@ class _NewChatDialogState extends State<NewChatDialog> {
               itemCount: results.length,
               itemBuilder: (_, index) {
                 final user = results[index];
+                if (groupMode) {
+                  return CheckboxListTile(
+                    value: selected.containsKey(user.id),
+                    secondary: CircleAvatar(
+                      child: Text(
+                        user.displayName.characters.first.toUpperCase(),
+                      ),
+                    ),
+                    title: Text(user.displayName),
+                    subtitle: Text(user.email),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        selected[user.id] = user;
+                      } else {
+                        selected.remove(user.id);
+                      }
+                    }),
+                  );
+                }
                 return ListTile(
                   leading: CircleAvatar(
                     child: Text(
@@ -270,8 +342,36 @@ class _NewChatDialogState extends State<NewChatDialog> {
         onPressed: () => Navigator.pop(context),
         child: const Text('Đóng'),
       ),
+      if (groupMode)
+        FilledButton.icon(
+          onPressed: loading ? null : createGroup,
+          icon: const Icon(Icons.group_add_outlined),
+          label: Text('Tạo nhóm (${selected.length})'),
+        ),
     ],
   );
+
+  Future<void> createGroup() async {
+    final name = groupName.text.trim();
+    if (name.length < 2 || selected.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nhập tên nhóm và chọn ít nhất một thành viên'),
+        ),
+      );
+      return;
+    }
+    setState(() => loading = true);
+    final conversation = await context.read<ConversationsCubit>().createGroup(
+      name,
+      selected.values.toList(),
+    );
+    if (!mounted) return;
+    setState(() => loading = false);
+    if (conversation == null) return;
+    Navigator.pop(context);
+    context.push('/chat/${conversation.id}', extra: conversation);
+  }
 }
 
 class _EmptyChat extends StatelessWidget {

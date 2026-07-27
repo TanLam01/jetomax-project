@@ -147,3 +147,80 @@ func (h *ConversationHandler) RemoveMember(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+// ListMembers godoc
+// @Summary List group members
+// @Description Any group member may list member profiles and roles.
+// @Tags conversations
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Conversation UUID"
+// @Success 200 {object} dto.ConversationMemberListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /conversations/{id}/members [get]
+func (h *ConversationHandler) ListMembers(c *gin.Context) {
+	members, err := h.service.ListMembers(c.Request.Context(), authenticatedUserID(c), c.Param("id"))
+	if err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, dto.NewConversationMemberListResponse(members))
+}
+
+// UpdateMemberRole godoc
+// @Summary Promote or demote a group member
+// @Description Only the owner may change another member between admin and member.
+// @Tags conversations
+// @Accept json
+// @Security BearerAuth
+// @Param id path string true "Conversation UUID"
+// @Param userId path string true "Target user UUID"
+// @Param request body dto.UpdateMemberRoleRequest true "New role"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /conversations/{id}/members/{userId}/role [patch]
+func (h *ConversationHandler) UpdateMemberRole(c *gin.Context) {
+	var request dto.UpdateMemberRoleRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		validationError(c, "invalid request body")
+		return
+	}
+	if err := h.service.UpdateMemberRole(c.Request.Context(), authenticatedUserID(c), c.Param("id"), c.Param("userId"), request.Role); err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// TransferOwnership godoc
+// @Summary Transfer group ownership
+// @Description Only the current owner may transfer ownership to another member; the previous owner becomes admin.
+// @Tags conversations
+// @Accept json
+// @Security BearerAuth
+// @Param id path string true "Conversation UUID"
+// @Param request body dto.TransferOwnershipRequest true "New owner"
+// @Success 204
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /conversations/{id}/ownership [post]
+func (h *ConversationHandler) TransferOwnership(c *gin.Context) {
+	var request dto.TransferOwnershipRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		validationError(c, "invalid request body")
+		return
+	}
+	if err := h.service.TransferOwnership(c.Request.Context(), authenticatedUserID(c), c.Param("id"), request.UserID); err != nil {
+		resourceError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

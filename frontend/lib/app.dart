@@ -77,6 +77,8 @@ class _ChatAppState extends State<ChatApp> {
               child: ChatPage(
                 conversationId: state.pathParameters['id']!,
                 title: conversation?.name ?? 'Cuộc trò chuyện',
+                conversationType: conversation?.type ?? 'direct',
+                currentRole: conversation?.role ?? 'member',
               ),
             );
           },

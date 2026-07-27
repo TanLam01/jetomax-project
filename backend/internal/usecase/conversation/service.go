@@ -92,6 +92,37 @@ func (s *Service) RemoveMember(ctx context.Context, actorID, conversationID, tar
 	return s.repository.RemoveMember(ctx, conversationID, actorID, targetUserID)
 }
 
+func (s *Service) ListMembers(ctx context.Context, actorID, conversationID string) ([]entity.ConversationMember, error) {
+	if _, err := uuid.Parse(conversationID); err != nil {
+		return nil, fmt.Errorf("%w: invalid conversation id", domainerrors.ErrValidation)
+	}
+	return s.repository.ListMembers(ctx, conversationID, actorID)
+}
+
+func (s *Service) UpdateMemberRole(ctx context.Context, actorID, conversationID, targetUserID, role string) error {
+	if _, err := uuid.Parse(conversationID); err != nil {
+		return fmt.Errorf("%w: invalid conversation id", domainerrors.ErrValidation)
+	}
+	if _, err := uuid.Parse(targetUserID); err != nil {
+		return fmt.Errorf("%w: invalid user id", domainerrors.ErrValidation)
+	}
+	role = strings.ToLower(strings.TrimSpace(role))
+	if role != "admin" && role != "member" {
+		return fmt.Errorf("%w: role must be admin or member", domainerrors.ErrValidation)
+	}
+	return s.repository.UpdateMemberRole(ctx, conversationID, actorID, targetUserID, role)
+}
+
+func (s *Service) TransferOwnership(ctx context.Context, actorID, conversationID, targetUserID string) error {
+	if _, err := uuid.Parse(conversationID); err != nil {
+		return fmt.Errorf("%w: invalid conversation id", domainerrors.ErrValidation)
+	}
+	if _, err := uuid.Parse(targetUserID); err != nil {
+		return fmt.Errorf("%w: invalid user id", domainerrors.ErrValidation)
+	}
+	return s.repository.TransferOwnership(ctx, conversationID, actorID, targetUserID)
+}
+
 func NewService(repository repository.ConversationRepository) *Service {
 	return &Service{repository: repository}
 }

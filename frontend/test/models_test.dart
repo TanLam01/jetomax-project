@@ -21,4 +21,17 @@ void main() {
     expect(message.type, 'image');
     expect(message.attachment?.mimeType, 'image/jpeg');
   });
+
+  test('parses a group member role', () {
+    final member = GroupMember.fromJson({
+      'user_id': 'user-1',
+      'email': 'admin@example.com',
+      'display_name': 'Admin',
+      'role': 'admin',
+      'joined_at': '2026-01-01T00:00:00Z',
+    });
+
+    expect(member.userId, 'user-1');
+    expect(member.role, 'admin');
+  });
 }

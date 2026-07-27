@@ -56,6 +56,22 @@ class ConversationsCubit extends Cubit<ConversationsState> {
     }
   }
 
+  Future<Conversation?> createGroup(String name, List<User> members) async {
+    try {
+      final conversation = await repository.createGroup(
+        name.trim(),
+        members.map((user) => user.id).toList(),
+      );
+      await load(silent: true);
+      return conversation;
+    } catch (error) {
+      emit(
+        ConversationsState(items: state.items, error: readableApiError(error)),
+      );
+      return null;
+    }
+  }
+
   @override
   Future<void> close() async {
     await _subscription.cancel();

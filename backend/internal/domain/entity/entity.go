@@ -45,6 +45,15 @@ type ConversationSummary struct {
 	PeerUserID   string
 }
 
+type ConversationMember struct {
+	UserID      string
+	Email       string
+	DisplayName string
+	AvatarKey   string
+	Role        string
+	JoinedAt    time.Time
+}
+
 type Message struct {
 	ID              string
 	ConversationID  string
